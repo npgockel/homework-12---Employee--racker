@@ -34,6 +34,14 @@ function starterQ() {
       rolesAdd();
     } else if (answers.employeeType === "View Roles") {
       rolesView();
+    } else if (answers.employeeType === "Delete Roles") {
+      rolesDelete();
+    } else if (answers.employeeType === "Add Employees") {
+      employeeAdd();
+    } else if (answers.employeeType === "View Employees") {
+      employeeView();
+    } else if (answers.employeeType === "Delete Employees") {
+      employeeDelete();
     }
   });
 }
@@ -52,6 +60,7 @@ function departmentAdd() {
     var query = "INSERT INTO department (name) values (?)";
     connection.query(query, [answers.department], function (err, results) {
       console.log(err, results);
+      starterQ();
     });
   });
 }
@@ -188,5 +197,186 @@ function rolesView() {
     console.log(err);
     console.table(result);
     starterQ();
+  });
+}
+
+function rolesDelete() {
+  var query = "SELECT * FROM roles";
+  connection.query(query, function (err, result) {
+    // var deptArray = [];
+    var rolesArrayDisplay = [];
+    for (var i = 0; i < result.length; i++) {
+      rolesArrayDisplay.push("ID:" + result[i].id + " " + result[i].title);
+      // deptArray.push(result[i].name);
+    }
+    var questions = [
+      {
+        type: "list",
+        name: "roles",
+        message: "Which role would you like to delete?",
+        choices: rolesArrayDisplay,
+      },
+    ];
+    inquirer.prompt(questions).then(function (answers) {
+      console.log(answers);
+      console.log(result);
+      var str = answers.roles;
+      var matches = str.match(/(\d+)/);
+      console.log(matches[0]);
+      var query = "DELETE FROM roles WHERE id = " + matches[0];
+      connection.query(query, function (err, results) {
+        console.log(err, results);
+        connection.query("SELECT * FROM roles", function (errOne, resOne) {
+          if (errOne) throw errOne;
+          const transformed = resOne.reduce((acc, { id, ...x }) => {
+            acc[id] = x;
+            return acc;
+          }, {});
+          console.table(transformed);
+        });
+        var questions = [
+          {
+            type: "list",
+            name: "finishDelete",
+            message: "What would you like to do?",
+            choices: ["Main Menu", "Delete Another"],
+          },
+        ];
+        inquirer.prompt(questions).then(function (answers) {
+          if (answers.finishDelete === "Delete Another") {
+            rolesDelete();
+          } else {
+            starterQ();
+          }
+        });
+      });
+    });
+  });
+}
+
+function employeeAdd() {
+  var query = "SELECT * FROM roles";
+  connection.query(query, function (err, roleResult) {
+    // var deptArray = [];
+    var rolesArrayDisplay = [];
+    for (var i = 0; i < roleResult.length; i++) {
+      rolesArrayDisplay.push("ID:" + roleResult[i].id + " " + roleResult[i].title);
+      // deptArray.push(roleResult[i].name);
+    }
+
+    var query = "SELECT * FROM employee";
+    connection.query(query, function (err, managerResult) {
+      // var deptArray = [];
+      var employeeArrayDisplay = [];
+      for (var i = 0; i < managerResult.length; i++) {
+        employeeArrayDisplay.push("ID:" + managerResult[i].id + " " + managerResult[i].first_name + " " + managerResult[i].last_name);
+        // deptArray.push(managerResult[i].name);
+      }
+      employeeArrayDisplay.unshift("No Manager");
+
+      var questions = [
+        {
+          type: "input",
+          name: "employeeFirst",
+          message: "What is the first name of the employee?",
+        },
+        {
+          type: "input",
+          name: "employeeLast",
+          message: "What is the last name of the employee?",
+        },
+        {
+          type: "list",
+          name: "employeeRoles",
+          message: "What is the role of the employee?",
+          choices: rolesArrayDisplay,
+        },
+        {
+          type: "list",
+          name: "manager",
+          message: "Does the employee have a manager",
+          choices: employeeArrayDisplay,
+        },
+      ];
+
+      inquirer.prompt(questions).then(function (answers) {
+      var roleStr = answers.employeeRoles;
+      var employeeRolesMatches = roleStr.match(/(\d+)/);
+      console.log(employeeRolesMatches[0]);
+
+      var managerStr = answers.manager;
+      var employeeManagerMatches = managerStr.match(/(\d+)/);
+      console.log(employeeManagerMatches[0]);
+
+        var query = "INSERT INTO employee (first_name,last_name,role_id,manager_id) values (?,?,?,?)";
+        connection.query(query, [answers.employeeFirst,answers.employeeLast,employeeRolesMatches[0],employeeManagerMatches[0]], function (err, results) {
+          console.log(err, results);
+          starterQ();
+        });
+      });
+    });
+  });
+}
+
+function employeeView() {
+  var query = "SELECT * FROM employee";
+  connection.query(query, function (err, result) {
+    console.log(err);
+    console.table(result);
+    starterQ();
+  });
+}
+
+function employeeDelete() {
+  var query = "SELECT * FROM employee";
+  connection.query(query, function (err, result) {
+    // var deptArray = [];
+    var employeeArrayDisplay = [];
+    for (var i = 0; i < result.length; i++) {
+      employeeArrayDisplay.push("ID:" + result[i].id + " " + result[i].title);
+      // deptArray.push(result[i].name);
+    }
+    var questions = [
+      {
+        type: "list",
+        name: "employee",
+        message: "Which employee would you like to delete?",
+        choices: employeeArrayDisplay,
+      },
+    ];
+    inquirer.prompt(questions).then(function (answers) {
+      console.log(answers);
+      console.log(result);
+      var str = answers.employee;
+      var matches = str.match(/(\d+)/);
+      console.log(matches[0]);
+      var query = "DELETE FROM employee WHERE id = " + matches[0];
+      connection.query(query, function (err, results) {
+        console.log(err, results);
+        connection.query("SELECT * FROM employee", function (errOne, resOne) {
+          if (errOne) throw errOne;
+          const transformed = resOne.reduce((acc, { id, ...x }) => {
+            acc[id] = x;
+            return acc;
+          }, {});
+          console.table(transformed);
+        });
+        var questions = [
+          {
+            type: "list",
+            name: "finishDelete",
+            message: "What would you like to do?",
+            choices: ["Main Menu", "Delete Another"],
+          },
+        ];
+        inquirer.prompt(questions).then(function (answers) {
+          if (answers.finishDelete === "Delete Another") {
+            employeeDelete();
+          } else {
+            starterQ();
+          }
+        });
+      });
+    });
   });
 }
