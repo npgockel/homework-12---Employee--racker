@@ -1,5 +1,6 @@
 var inquirer = require("inquirer");
 var mysql = require("mysql");
+const cTable = require("console.table");
 //
 var connection = mysql.createConnection({
   host: "localhost",
@@ -16,31 +17,33 @@ function starterQ() {
   var questions = [
     {
       type: "list",
-      name: "employeeType",
+      name: "trackerQ",
       message: "What would you like to do?",
-      choices: ["Add Departments", "View Departments", "Delete Departments", "Add Roles", "View Roles", "Delete Roles", "Add Employees", "View Employees", "Delete Employees"],
+      choices: ["Add Departments", "View Departments", "Delete Departments", "Add Roles", "View Roles", "Update Employee Role", "Delete Roles", "Add Employees", "View Employees", "Delete Employees"],
     },
   ];
 
   inquirer.prompt(questions).then(function (answers) {
     console.log(answers);
-    if (answers.employeeType === "Add Departments") {
+    if (answers.trackerQ === "Add Departments") {
       departmentAdd();
-    } else if (answers.employeeType === "View Departments") {
+    } else if (answers.trackerQ === "View Departments") {
       departmentView();
-    } else if (answers.employeeType === "Delete Departments") {
+    } else if (answers.trackerQ === "Delete Departments") {
       departmentDelete();
-    } else if (answers.employeeType === "Add Roles") {
+    } else if (answers.trackerQ === "Add Roles") {
       rolesAdd();
-    } else if (answers.employeeType === "View Roles") {
+    } else if (answers.trackerQ === "View Roles") {
       rolesView();
-    } else if (answers.employeeType === "Delete Roles") {
+    } else if (answers.trackerQ === "Delete Roles") {
       rolesDelete();
-    } else if (answers.employeeType === "Add Employees") {
+    } else if (answers.trackerQ === "Add Employees") {
       employeeAdd();
-    } else if (answers.employeeType === "View Employees") {
+    } else if (answers.trackerQ === "View Employees") {
       employeeView();
-    } else if (answers.employeeType === "Delete Employees") {
+    } else if (answers.trackerQ === "Update Employee Role") {
+      employeeRolesUpdate();
+    } else if (answers.trackerQ === "Delete Employees") {
       employeeDelete();
     }
   });
@@ -60,6 +63,7 @@ function departmentAdd() {
     var query = "INSERT INTO department (name) values (?)";
     connection.query(query, [answers.department], function (err, results) {
       console.log(err, results);
+      departmentView();
       starterQ();
     });
   });
@@ -68,7 +72,6 @@ function departmentAdd() {
 function departmentView() {
   var query = "SELECT * FROM department";
   connection.query(query, function (err, result) {
-    console.log(err);
     console.table(result);
     starterQ();
   });
@@ -120,6 +123,7 @@ function departmentDelete() {
           if (answers.finishDelete === "Delete Another") {
             departmentDelete();
           } else {
+            departmentView();
             starterQ();
           }
         });
@@ -183,6 +187,7 @@ function rolesAdd() {
           if (answers.finishRoles === "View Roles") {
             rolesView();
           } else {
+            rolesView();
             starterQ();
           }
         });
@@ -246,6 +251,7 @@ function rolesDelete() {
           if (answers.finishDelete === "Delete Another") {
             rolesDelete();
           } else {
+            rolesView();
             starterQ();
           }
         });
@@ -300,17 +306,18 @@ function employeeAdd() {
       ];
 
       inquirer.prompt(questions).then(function (answers) {
-      var roleStr = answers.employeeRoles;
-      var employeeRolesMatches = roleStr.match(/(\d+)/);
-      console.log(employeeRolesMatches[0]);
+        var roleStr = answers.employeeRoles;
+        var employeeRolesMatches = roleStr.match(/(\d+)/);
+        console.log(employeeRolesMatches[0]);
 
-      var managerStr = answers.manager;
-      var employeeManagerMatches = managerStr.match(/(\d+)/);
-      console.log(employeeManagerMatches[0]);
+        var managerStr = answers.manager;
+        var employeeManagerMatches = managerStr.match(/(\d+)/);
+        console.log(employeeManagerMatches[0]);
 
         var query = "INSERT INTO employee (first_name,last_name,role_id,manager_id) values (?,?,?,?)";
-        connection.query(query, [answers.employeeFirst,answers.employeeLast,employeeRolesMatches[0],employeeManagerMatches[0]], function (err, results) {
+        connection.query(query, [answers.employeeFirst, answers.employeeLast, employeeRolesMatches[0], employeeManagerMatches[0]], function (err, results) {
           console.log(err, results);
+          employeeView();
           starterQ();
         });
       });
@@ -327,13 +334,76 @@ function employeeView() {
   });
 }
 
+function employeeRolesUpdate() {
+  var query = "SELECT * FROM roles";
+  connection.query(query, function (err, result) {
+    var rolesArrayDisplay = [];
+    for (var i = 0; i < result.length; i++) {
+      rolesArrayDisplay.push("ID:" + result[i].id + " " + result[i].title);
+    }
+
+    var query = "SELECT * FROM employee";
+    connection.query(query, function (err, result) {
+      var employeeArrayDisplay = [];
+      for (var i = 0; i < result.length; i++) {
+        employeeArrayDisplay.push("ID " + result[i].id + ": " + result[i].first_name + " " + result[i].last_name);
+      }
+
+      var questions = [
+        {
+          type: "list",
+          name: "employee",
+          message: "Which employee's role would you like to update?",
+          choices: employeeArrayDisplay,
+        },
+        {
+          type: "list",
+          name: "roles",
+          message: "To which role would you like to change this employee?",
+          choices: rolesArrayDisplay,
+        },
+      ];
+      inquirer.prompt(questions).then(function (answers) {
+        var rolStr = answers.roles;
+        var roleMatches = rolStr.match(/(\d+)/);
+        console.log(roleMatches[0]);
+
+        var empStr = answers.employee;
+        var employeeMatches = empStr.match(/(\d+)/);
+        console.log(employeeMatches[0]);
+
+        var query = "UPDATE employee SET role_id = ? WHERE id = ?";
+        connection.query(query, [roleMatches[0], employeeMatches[0]], function (err, results) {
+          employeeView();
+
+          var questions = [
+            {
+              type: "list",
+              name: "finishDelete",
+              message: "What would you like to do?",
+              choices: ["Main Menu", "Delete Another"],
+            },
+          ];
+          inquirer.prompt(questions).then(function (answers) {
+            if (answers.finishDelete === "Delete Another") {
+              employeeRolesUpdate();
+            } else {;
+              starterQ();
+            }
+          });
+        });
+      });
+    });
+  });
+}
+
 function employeeDelete() {
   var query = "SELECT * FROM employee";
   connection.query(query, function (err, result) {
     // var deptArray = [];
     var employeeArrayDisplay = [];
     for (var i = 0; i < result.length; i++) {
-      employeeArrayDisplay.push("ID:" + result[i].id + " " + result[i].title);
+      employeeArrayDisplay.push("ID " + result[i].id + ": " + result[i].first_name + " " + result[i].last_name);
       // deptArray.push(result[i].name);
     }
     var questions = [
@@ -344,6 +414,8 @@ function employeeDelete() {
         choices: employeeArrayDisplay,
       },
     ];
+
+    // console.log(employeeArrayDisplay);
     inquirer.prompt(questions).then(function (answers) {
       console.log(answers);
       console.log(result);
@@ -352,15 +424,14 @@ function employeeDelete() {
       console.log(matches[0]);
       var query = "DELETE FROM employee WHERE id = " + matches[0];
       connection.query(query, function (err, results) {
-        console.log(err, results);
         connection.query("SELECT * FROM employee", function (errOne, resOne) {
           if (errOne) throw errOne;
           const transformed = resOne.reduce((acc, { id, ...x }) => {
             acc[id] = x;
             return acc;
           }, {});
-          console.table(transformed);
         });
+        employeeView();
         var questions = [
           {
             type: "list",

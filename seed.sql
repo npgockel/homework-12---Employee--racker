@@ -9,8 +9,11 @@ CREATE TABLE `employee_tracker_db`.`employee`  (
   REFERENCES `employee_tracker_db`.`employee` (`id`),
   FOREIGN KEY (`role_id`)
   REFERENCES `employee_tracker_db`.`roles` (`id`),
+ 
   );
 
+
+SET FOREIGN_KEY_CHECKS=0;
 
 SELECT employeee.name, role.title, department.name
 FROM employee
