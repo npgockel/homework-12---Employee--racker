@@ -1,7 +1,9 @@
 var inquirer = require("inquirer");
 var mysql = require("mysql");
 const cTable = require("console.table");
-//
+
+
+
 var connection = mysql.createConnection({
   host: "localhost",
   user: "root",
@@ -19,28 +21,27 @@ function starterQ() {
       type: "list",
       name: "trackerQ",
       message: "What would you like to do?",
-      choices: ["Add Departments", "View Departments", "Delete Departments", "Add Roles", "View Roles", "Update Employee Role", "Delete Roles", "Add Employees", "View Employees", "Delete Employees"],
+      choices: ["Add Departments", "View Departments", "Delete Departments", "Add Roles", "View Roles", "Delete Roles", "Add Employees", "View Employees", "Update Employee Role", "Delete Employees"],
     },
   ];
 
   inquirer.prompt(questions).then(function (answers) {
-    console.log(answers);
     if (answers.trackerQ === "Add Departments") {
       departmentAdd();
     } else if (answers.trackerQ === "View Departments") {
-      departmentView();
+      departmentViewStarter();
     } else if (answers.trackerQ === "Delete Departments") {
       departmentDelete();
     } else if (answers.trackerQ === "Add Roles") {
       rolesAdd();
     } else if (answers.trackerQ === "View Roles") {
-      rolesView();
+      rolesViewStarter();
     } else if (answers.trackerQ === "Delete Roles") {
       rolesDelete();
     } else if (answers.trackerQ === "Add Employees") {
       employeeAdd();
     } else if (answers.trackerQ === "View Employees") {
-      employeeView();
+      employeeViewStarter();
     } else if (answers.trackerQ === "Update Employee Role") {
       employeeRolesUpdate();
     } else if (answers.trackerQ === "Delete Employees") {
@@ -62,29 +63,37 @@ function departmentAdd() {
     console.log("This is the name of the department: ", answers.department);
     var query = "INSERT INTO department (name) values (?)";
     connection.query(query, [answers.department], function (err, results) {
-      console.log(err, results);
+      if (err) throw err;
       departmentView();
       starterQ();
     });
   });
 }
 
+function departmentViewStarter() {
+  var query = "SELECT * FROM department";
+  connection.query(query, function (err, result) {
+    if (err) throw err;
+    console.table("***Current Departments***", result);
+  });
+  starterQ();
+}
+
 function departmentView() {
   var query = "SELECT * FROM department";
   connection.query(query, function (err, result) {
-    console.table(result);
-    starterQ();
+    if (err) throw err;
+    console.table("***Current Departments***", result);
   });
 }
 
 function departmentDelete() {
   var query = "SELECT * FROM department";
   connection.query(query, function (err, result) {
-    // var deptArray = [];
+    if (err) throw err;
     var deptArrayDisplay = [];
     for (var i = 0; i < result.length; i++) {
       deptArrayDisplay.push("ID:" + result[i].id + " " + result[i].name);
-      // deptArray.push(result[i].name);
     }
     var questions = [
       {
@@ -95,22 +104,12 @@ function departmentDelete() {
       },
     ];
     inquirer.prompt(questions).then(function (answers) {
-      console.log(answers);
-      console.log(result);
       var str = answers.departments;
       var matches = str.match(/(\d+)/);
-      console.log(matches[0]);
       var query = "DELETE FROM department WHERE id = " + matches[0];
       connection.query(query, function (err, results) {
-        console.log(err, results);
-        connection.query("SELECT * FROM department", function (errOne, resOne) {
-          if (errOne) throw errOne;
-          const transformed = resOne.reduce((acc, { id, ...x }) => {
-            acc[id] = x;
-            return acc;
-          }, {});
-          console.table(transformed);
-        });
+        if (err) throw err;
+        departmentView();
         var questions = [
           {
             type: "list",
@@ -123,7 +122,6 @@ function departmentDelete() {
           if (answers.finishDelete === "Delete Another") {
             departmentDelete();
           } else {
-            departmentView();
             starterQ();
           }
         });
@@ -135,13 +133,10 @@ function departmentDelete() {
 function rolesAdd() {
   var query = "SELECT * FROM department";
   connection.query(query, function (err, result) {
-    // var deptArray = [];
     var deptArrayDisplay = [];
     for (var i = 0; i < result.length; i++) {
       deptArrayDisplay.push(result[i].name);
-      // deptArray.push(result[i].name);
     }
-    console.table(deptArrayDisplay);
 
     var questions = [
       {
@@ -162,7 +157,6 @@ function rolesAdd() {
       },
     ];
     inquirer.prompt(questions).then(function (answers) {
-      console.log(answers);
       var department_id;
       for (var i = 0; i < result.length; i++) {
         if (result[i].name === answers.department) {
@@ -172,22 +166,21 @@ function rolesAdd() {
 
       var query = "INSERT INTO roles (title, salary, department_id) values (?,?,?)";
       connection.query(query, [answers.jobTitle, answers.salary, department_id], function (err, results) {
-        console.log(err);
-        console.table(results);
+        if (err) throw err;
 
         var questions = [
           {
             type: "list",
             name: "finishRoles",
             message: "What would you like to do?",
-            choices: ["Main Menu", "View Roles"],
+            choices: ["Main Menu", "Add more Roles"],
           },
         ];
+        rolesView();
         inquirer.prompt(questions).then(function (answers) {
           if (answers.finishRoles === "View Roles") {
-            rolesView();
+            rolesAdd();
           } else {
-            rolesView();
             starterQ();
           }
         });
@@ -196,23 +189,29 @@ function rolesAdd() {
   });
 }
 
+function rolesViewStarter() {
+  var query = "SELECT * FROM roles";
+  connection.query(query, function (err, result) {
+    if (err) throw err;
+    console.table("***Current Roles***", result);
+  });
+  starterQ();
+}
+
 function rolesView() {
   var query = "SELECT * FROM roles";
   connection.query(query, function (err, result) {
-    console.log(err);
-    console.table(result);
-    starterQ();
+    if (err) throw err;
+    console.table("***Current Roles***", result);
   });
 }
 
 function rolesDelete() {
   var query = "SELECT * FROM roles";
   connection.query(query, function (err, result) {
-    // var deptArray = [];
     var rolesArrayDisplay = [];
     for (var i = 0; i < result.length; i++) {
       rolesArrayDisplay.push("ID:" + result[i].id + " " + result[i].title);
-      // deptArray.push(result[i].name);
     }
     var questions = [
       {
@@ -223,14 +222,11 @@ function rolesDelete() {
       },
     ];
     inquirer.prompt(questions).then(function (answers) {
-      console.log(answers);
-      console.log(result);
       var str = answers.roles;
       var matches = str.match(/(\d+)/);
-      console.log(matches[0]);
       var query = "DELETE FROM roles WHERE id = " + matches[0];
       connection.query(query, function (err, results) {
-        console.log(err, results);
+        if (err) throw err;
         connection.query("SELECT * FROM roles", function (errOne, resOne) {
           if (errOne) throw errOne;
           const transformed = resOne.reduce((acc, { id, ...x }) => {
@@ -247,11 +243,11 @@ function rolesDelete() {
             choices: ["Main Menu", "Delete Another"],
           },
         ];
+        rolesView();
         inquirer.prompt(questions).then(function (answers) {
           if (answers.finishDelete === "Delete Another") {
             rolesDelete();
           } else {
-            rolesView();
             starterQ();
           }
         });
@@ -263,23 +259,17 @@ function rolesDelete() {
 function employeeAdd() {
   var query = "SELECT * FROM roles";
   connection.query(query, function (err, roleResult) {
-    // var deptArray = [];
     var rolesArrayDisplay = [];
     for (var i = 0; i < roleResult.length; i++) {
       rolesArrayDisplay.push("ID:" + roleResult[i].id + " " + roleResult[i].title);
-      // deptArray.push(roleResult[i].name);
     }
 
     var query = "SELECT * FROM employee";
     connection.query(query, function (err, managerResult) {
-      // var deptArray = [];
       var employeeArrayDisplay = [];
       for (var i = 0; i < managerResult.length; i++) {
         employeeArrayDisplay.push("ID:" + managerResult[i].id + " " + managerResult[i].first_name + " " + managerResult[i].last_name);
-        // deptArray.push(managerResult[i].name);
       }
-      employeeArrayDisplay.unshift("No Manager");
-
       var questions = [
         {
           type: "input",
@@ -312,25 +302,46 @@ function employeeAdd() {
 
         var managerStr = answers.manager;
         var employeeManagerMatches = managerStr.match(/(\d+)/);
-        console.log(employeeManagerMatches[0]);
 
         var query = "INSERT INTO employee (first_name,last_name,role_id,manager_id) values (?,?,?,?)";
         connection.query(query, [answers.employeeFirst, answers.employeeLast, employeeRolesMatches[0], employeeManagerMatches[0]], function (err, results) {
-          console.log(err, results);
+          if (err) throw err;
+          var questions = [
+            {
+              type: "list",
+              name: "finishDelete",
+              message: "What would you like to do?",
+              choices: ["Main Menu", "Add Another Employee"],
+            },
+          ];
           employeeView();
-          starterQ();
+          inquirer.prompt(questions).then(function (answers) {
+            if (answers.finishDelete === "Delete Another") {
+              employeeAdd();
+            } else {
+              starterQ();
+            }
+          });
         });
       });
     });
   });
 }
 
+function employeeViewStarter() {
+  var query = "SELECT * FROM employee";
+  connection.query(query, function (err, result) {
+    if (err) throw err;
+    console.table("***Current Employees***", result);
+  });
+  starterQ();
+}
+
 function employeeView() {
   var query = "SELECT * FROM employee";
   connection.query(query, function (err, result) {
-    console.log(err);
-    console.table(result);
-    starterQ();
+    if (err) throw err;
+    console.table("***Current Employees***", result);
   });
 }
 
@@ -385,9 +396,9 @@ function employeeRolesUpdate() {
             },
           ];
           inquirer.prompt(questions).then(function (answers) {
-            if (answers.finishDelete === "Delete Another") {
+            if (answers.finishDelete === "Update Another") {
               employeeRolesUpdate();
-            } else {;
+            } else {
               starterQ();
             }
           });
@@ -400,11 +411,9 @@ function employeeRolesUpdate() {
 function employeeDelete() {
   var query = "SELECT * FROM employee";
   connection.query(query, function (err, result) {
-    // var deptArray = [];
     var employeeArrayDisplay = [];
     for (var i = 0; i < result.length; i++) {
       employeeArrayDisplay.push("ID " + result[i].id + ": " + result[i].first_name + " " + result[i].last_name);
-      // deptArray.push(result[i].name);
     }
     var questions = [
       {
@@ -415,7 +424,6 @@ function employeeDelete() {
       },
     ];
 
-    // console.log(employeeArrayDisplay);
     inquirer.prompt(questions).then(function (answers) {
       console.log(answers);
       console.log(result);
